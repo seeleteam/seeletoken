@@ -427,67 +427,6 @@ contract SeeleToken is PausableToken {
     }
 }
 
-// File: zeppelin-solidity/contracts/token/SafeERC20.sol
-
-/**
- * @title SafeERC20
- * @dev Wrappers around ERC20 operations that throw on failure.
- * To use this library you can add a `using SafeERC20 for ERC20;` statement to your contract,
- * which allows you to call the safe operations as `token.safeTransfer(...)`, etc.
- */
-library SafeERC20 {
-  function safeTransfer(ERC20Basic token, address to, uint256 value) internal {
-    assert(token.transfer(to, value));
-  }
-
-  function safeTransferFrom(ERC20 token, address from, address to, uint256 value) internal {
-    assert(token.transferFrom(from, to, value));
-  }
-
-  function safeApprove(ERC20 token, address spender, uint256 value) internal {
-    assert(token.approve(spender, value));
-  }
-}
-
-// File: contracts/TokenTimelock.sol
-
-/**
- * @title TokenTimelock
- * @dev TokenTimelock is a token holder contract that will allow a
- * beneficiary to extract the tokens after a given release time
- */
-contract TokenTimelock {
-  using SafeERC20 for ERC20Basic;
-
-  // ERC20 basic token contract being held
-  ERC20Basic public token;
-
-  // beneficiary of tokens after they are released
-  address public beneficiary;
-
-  // timestamp when token release is enabled
-  uint public releaseTime;
-
-  function TokenTimelock(ERC20Basic _token, address _beneficiary, uint _releaseTime) public {
-    require(_releaseTime > now);
-    token = _token;
-    beneficiary = _beneficiary;
-    releaseTime = _releaseTime;
-  }
-
-  /**
-   * @notice Transfers tokens held by timelock to beneficiary.
-   */
-  function release() public {
-    require(now >= releaseTime);
-
-    uint256 amount = token.balanceOf(this);
-    require(amount > 0);
-
-    token.safeTransfer(beneficiary, amount);
-  }
-}
-
 // File: contracts/SeeleCrowdSale.sol
 
 /// @title SeeleCrowdSale Contract
@@ -508,6 +447,7 @@ contract SeeleCrowdSale is Pausable {
     uint256 public maxBuyLimit = 5 ether;
 
     uint public constant MINER_STAKE = 3000;    // for minter
+    uint public constant PRE_SALE_STAKE = 4200; // fpr private sale
     uint public constant OPEN_SALE_STAKE = 625; // for public
     uint public constant OTHER_STAKE = 6375;    // for others
 
@@ -522,6 +462,7 @@ contract SeeleCrowdSale is Pausable {
     address public wallet;
     address public minerAddress;
     address public otherAddress;
+    address public presaleAddress;
     /// Contribution start time
     uint public startTime;
     /// Contribution end time
@@ -572,25 +513,27 @@ contract SeeleCrowdSale is Pausable {
 
     function SeeleCrowdSale (
         address _wallet, 
-        address _presaleAddress,
         address _minerAddress,
-        address _otherAddress,
+        address _presaleAddress,
+        address _otherAddress
         ) public 
         validAddress(_wallet) 
-        validAddress(_presaleAddress) 
         validAddress(_minerAddress) 
+        validAddress(_presaleAddress) 
         validAddress(_otherAddress) 
         {
         paused = true;  
         wallet = _wallet;
         minerAddress = _minerAddress;
-        otherAddress = _otherAddress;        
+        otherAddress = _otherAddress;     
+        presaleAddress = _presaleAddress;   
 
         openSoldTokens = 0;
         /// Create seele token contract instance
         seeleToken = new SeeleToken(this, msg.sender, SEELE_TOTAL_SUPPLY);
 
         seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER, false);
+        seeleToken.mint(presaleAddress, PRE_SALE_STAKE * STAKE_MULTIPLIER, false);
         seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER, false);
     }
 
@@ -693,7 +636,7 @@ contract SeeleCrowdSale is Pausable {
         // Do not allow contracts to game the system
         require(!isContract(msg.sender));        
 
-        require(tx.gasprice <= 60000000000 wei);
+        require(tx.gasprice <= 100000000000 wei);
 
         uint inWhiteListTag = fullWhiteList[receipient];
         require(inWhiteListTag>0);

@@ -1,7 +1,6 @@
 pragma solidity ^0.4.18;
 
 import 'zeppelin-solidity/contracts/lifecycle/Pausable.sol';
-import './TokenTimelock.sol';
 import './SeeleToken.sol';
 
 
@@ -23,6 +22,7 @@ contract SeeleCrowdSale is Pausable {
     uint256 public maxBuyLimit = 5 ether;
 
     uint public constant MINER_STAKE = 3000;    // for minter
+    uint public constant PRE_SALE_STAKE = 4200; // fpr private sale
     uint public constant OPEN_SALE_STAKE = 625; // for public
     uint public constant OTHER_STAKE = 6375;    // for others
 
@@ -37,6 +37,7 @@ contract SeeleCrowdSale is Pausable {
     address public wallet;
     address public minerAddress;
     address public otherAddress;
+    address public presaleAddress;
     /// Contribution start time
     uint public startTime;
     /// Contribution end time
@@ -88,22 +89,26 @@ contract SeeleCrowdSale is Pausable {
     function SeeleCrowdSale (
         address _wallet, 
         address _minerAddress,
+        address _presaleAddress,
         address _otherAddress
         ) public 
         validAddress(_wallet) 
         validAddress(_minerAddress) 
+        validAddress(_presaleAddress) 
         validAddress(_otherAddress) 
         {
         paused = true;  
         wallet = _wallet;
         minerAddress = _minerAddress;
-        otherAddress = _otherAddress;        
+        otherAddress = _otherAddress;     
+        presaleAddress = _presaleAddress;   
 
         openSoldTokens = 0;
         /// Create seele token contract instance
         seeleToken = new SeeleToken(this, msg.sender, SEELE_TOTAL_SUPPLY);
 
         seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER, false);
+        seeleToken.mint(presaleAddress, PRE_SALE_STAKE * STAKE_MULTIPLIER, false);
         seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER, false);
     }
 
@@ -206,7 +211,7 @@ contract SeeleCrowdSale is Pausable {
         // Do not allow contracts to game the system
         require(!isContract(msg.sender));        
 
-        require(tx.gasprice <= 60000000000 wei);
+        require(tx.gasprice <= 100000000000 wei);
 
         uint inWhiteListTag = fullWhiteList[receipient];
         require(inWhiteListTag>0);
