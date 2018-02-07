@@ -15,7 +15,7 @@ contract SeeleToken is PausableToken {
     uint public constant decimals = 18;
 
     /// seele total tokens supply
-    uint public maxTotalSupply;
+    uint public currentSupply;
 
     /// Fields that are only changed in constructor
     /// seele sale  contract
@@ -40,7 +40,7 @@ contract SeeleToken is PausableToken {
     }
 
     modifier maxTokenAmountNotReached (uint amount){
-        assert(totalSupply.add(amount) <= maxTotalSupply);
+        assert(currentSupply.add(amount) <= totalSupply);
         _;
     }
 
@@ -67,7 +67,7 @@ contract SeeleToken is PausableToken {
         minter = _minter;
         startTime = _startTime;
         endTime = _endTime;
-        maxTotalSupply = _maxTotalSupply;
+        totalSupply = _maxTotalSupply;
         transferOwnership(_admin);
     }
 
@@ -88,7 +88,7 @@ contract SeeleToken is PausableToken {
     {
         require(now <= endTime);
         balances[receipent] = balances[receipent].add(amount);
-        totalSupply = totalSupply.add(amount);
+        currentSupply = currentSupply.add(amount);
         return true;
     }
 }

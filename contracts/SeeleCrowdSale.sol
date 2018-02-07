@@ -16,9 +16,6 @@ contract SeeleCrowdSale is Pausable {
     uint public constant SEELE_TOTAL_SUPPLY = 1000000000 ether;
     uint public constant MAX_SALE_DURATION = 1 weeks;
 
-    // release lock token after time
-    uint public constant LOCK_TIME =  1 years;
-
     /// Exchange rates
     uint public constant EXCHANGE_RATE = 1000;
 
@@ -28,17 +25,16 @@ contract SeeleCrowdSale is Pausable {
     // /// Exchange rates for last phase
     // uint public constant PRICE_RATE_LAST = 16667;
 
-
     uint256 public minBuyLimit = 0.1 ether;
     uint256 public maxBuyLimit = 10 ether;
 
-    uint public constant LOCK_STAKE = 300;  
-    uint public constant DEV_TEAM_STAKE = 100;     
-    uint public constant COMMUNITY_STAKE = 100;     
-    uint public constant PRE_SALE_STAKE = 400;      
-    uint public constant OPEN_SALE_STAKE = 100;
+    uint public constant MINER_STAKE = 3000;    // for minter
+    uint public constant PRE_SALE_STAKE = 3000;    
+    uint public constant OPEN_SALE_STAKE = 2000; 
+    uint public constant OTHER_STAKE = 2000;     
+
     
-    uint public constant DIVISOR_STAKE = 1000;
+    uint public constant DIVISOR_STAKE = 10000;
 
     // max open sale tokens
     uint public constant MAX_OPEN_SOLD = SEELE_TOTAL_SUPPLY * OPEN_SALE_STAKE / DIVISOR_STAKE;
@@ -47,9 +43,8 @@ contract SeeleCrowdSale is Pausable {
     /// All deposited ETH will be instantly forwarded to this address.
     address public wallet;
     address public presaleAddress;
-    address public lockAddress;
-    address public teamAddress;
-    address public communityAddress;
+    address public minerAddress;
+    address public otherAddress;
     /// Contribution start time
     uint public startTime;
     /// Contribution end time
@@ -60,9 +55,6 @@ contract SeeleCrowdSale is Pausable {
     uint public openSoldTokens;
     /// ERC20 compilant seele token contact instance
     SeeleToken public seeleToken; 
-
-    // lock token
-    TokenTimelock public tokenTimelock; 
 
     /// tags show address can join in open sale
     mapping (address => uint) public fullWhiteList;
@@ -101,43 +93,33 @@ contract SeeleCrowdSale is Pausable {
         _;
     }
 
-    function SeeleCrowdSale (address _admin, 
+    function SeeleCrowdSale (
         address _wallet, 
         address _presaleAddress,
-        address _lockAddress,
-        address _teamAddress,
-        address _communityAddress,
+        address _minerAddress,
+        address _otherAddress,
         uint _startTime 
         ) public 
-        validAddress(_admin) 
         validAddress(_wallet) 
         validAddress(_presaleAddress) 
-        validAddress(_lockAddress) 
-        validAddress(_teamAddress) 
-        validAddress(_communityAddress) 
+        validAddress(_minerAddress) 
+        validAddress(_otherAddress) 
         {
 
         wallet = _wallet;
         presaleAddress = _presaleAddress;
-        lockAddress = _lockAddress;
-        teamAddress = _teamAddress;
-        communityAddress = _communityAddress;        
+        minerAddress = _minerAddress;
+        otherAddress = _otherAddress;        
         startTime = _startTime;
         endTime = startTime + MAX_SALE_DURATION;
 
         openSoldTokens = 0;
         /// Create seele token contract instance
-        seeleToken = new SeeleToken(this, _admin, SEELE_TOTAL_SUPPLY, startTime, endTime);
+        seeleToken = new SeeleToken(this, msg.sender, SEELE_TOTAL_SUPPLY, startTime, endTime);
 
-        tokenTimelock = new TokenTimelock(seeleToken, lockAddress, now + LOCK_TIME);
-
-        /// Reserve tokens according seele ICO rules
         seeleToken.mint(presaleAddress, PRE_SALE_STAKE * STAKE_MULTIPLIER);
-        seeleToken.mint(tokenTimelock, LOCK_STAKE * STAKE_MULTIPLIER);
-        seeleToken.mint(teamAddress, DEV_TEAM_STAKE * STAKE_MULTIPLIER);
-        seeleToken.mint(communityAddress, COMMUNITY_STAKE * STAKE_MULTIPLIER);  
-
-        transferOwnership(_admin);
+        seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER);
+        seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER);
     }
 
     function setMaxBuyLimit(uint256 limit)
@@ -164,7 +146,6 @@ contract SeeleCrowdSale is Pausable {
         earlierThan(endTime)
     {
         require(saleNotEnd());
-        // WhiteList(users[0], openTag);
         for (uint i = 0; i < users.length; i++) {
             //WhiteList(users[i], openTag);
             fullWhiteList[users[i]] = openTag;
@@ -227,7 +208,6 @@ contract SeeleCrowdSale is Pausable {
         require(tx.gasprice <= 60000000000 wei);
 
         uint inWhiteListTag = fullWhiteList[receipient];
-        //CheckWhiteList(receipient, inWhiteListTag);
         require(inWhiteListTag>0);
         
         doBuy(receipient);
@@ -258,23 +238,6 @@ contract SeeleCrowdSale is Pausable {
         }
     }
 
-    /// CONSTANT METHODS
-    /// @dev Get current exchange rate
-    // function priceRate() public view returns (uint) {
-    //     // if (startTime <= now && now < startTime + 1 weeks ) {
-    //     //     return  PRICE_RATE_FIRST;
-    //     // }else if (startTime + 1 weeks <= now && now < startTime + 2 weeks ) {
-    //     //     return PRICE_RATE_SECOND;
-    //     // }else if (startTime + 2 weeks <= now && now < endTime) {
-    //     //     return PRICE_RATE_LAST;
-    //     // }else {
-    //     //     assert(false);
-    //     // }
-    //     // return now;
-
-    //     return PUBLIC_PRICE;
-    // }
-
     /// @dev Utility function for calculate available tokens and cost ethers
     function costAndBuyTokens(uint availableToken) constant internal returns (uint costValue, uint getTokens) {
         // all conditions has checked in the caller functions
@@ -301,10 +264,5 @@ contract SeeleCrowdSale is Pausable {
             size := extcodesize(_addr)
         }
         return size > 0;
-    }
-
-    // release lock token 
-    function releaseLockToken()  external onlyOwner {
-        tokenTimelock.release();
     }
 }
