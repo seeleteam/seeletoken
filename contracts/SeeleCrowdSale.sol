@@ -87,12 +87,10 @@ contract SeeleCrowdSale is Pausable {
 
     function SeeleCrowdSale (
         address _wallet, 
-        address _presaleAddress,
         address _minerAddress,
-        address _otherAddress,
+        address _otherAddress
         ) public 
         validAddress(_wallet) 
-        validAddress(_presaleAddress) 
         validAddress(_minerAddress) 
         validAddress(_otherAddress) 
         {
