@@ -21,21 +21,14 @@ contract SeeleToken is PausableToken {
     /// seele sale  contract
     address public minter; 
 
-    /// ICO start time
-    uint public startTime;
-    /// ICO end time
-    uint public endTime;
+    /// Fields that can be changed by functions
+    mapping (address => uint) public lockedBalances;
 
     /*
      * MODIFIERS
      */
     modifier onlyMinter {
         assert(msg.sender == minter);
-        _;
-    }
-
-    modifier isLaterThan (uint x){
-        assert(now > x);
         _;
     }
 
@@ -56,17 +49,13 @@ contract SeeleToken is PausableToken {
      * @dev Initialize the Seele Token
      * @param _minter The SeeleCrowdSale Contract 
      * @param _maxTotalSupply total supply token    
-     * @param _startTime start time
-     * @param _endTime End Time
      */
-    function SeeleToken(address _minter, address _admin, uint _maxTotalSupply, uint _startTime, uint _endTime) 
+    function SeeleToken(address _minter, address _admin, uint _maxTotalSupply) 
         public 
         validAddress(_admin)
         validAddress(_minter)
         {
         minter = _minter;
-        startTime = _startTime;
-        endTime = _endTime;
         totalSupply = _maxTotalSupply;
         transferOwnership(_admin);
     }
@@ -77,18 +66,46 @@ contract SeeleToken is PausableToken {
      * @dev SeeleCrowdSale contract instance mint token
      * @param receipent The destination account owned mint tokens    
      * @param amount The amount of mint token
+     * @param isLock Lock token flag
      * be sent to this address.
      */
 
-    function mint(address receipent, uint amount)
+    function mint(address receipent, uint amount, bool isLock)
         external
         onlyMinter
         maxTokenAmountNotReached(amount)
         returns (bool)
     {
-        require(now <= endTime);
-        balances[receipent] = balances[receipent].add(amount);
+        if (isLock ) {
+            lockedBalances[receipent] = lockedBalances[receipent].add(amount);
+        } else {
+            balances[receipent] = balances[receipent].add(amount);
+        }
         currentSupply = currentSupply.add(amount);
         return true;
+    }
+
+     /*
+     * PUBLIC FUNCTIONS
+     */
+
+    /// @dev Locking period has passed - Locked tokens have turned into tradeable
+    function claimTokens(address receipent)
+        public
+        onlyOwner
+    {
+        balances[receipent] = balances[receipent].add(lockedBalances[receipent]);
+        lockedBalances[receipent] = 0;
+    }
+
+    /*
+     * CONSTANT METHODS, get lock balance of address
+     */
+    function lockedBalanceOf(address _addr) 
+        constant 
+        public
+        returns (uint balance) 
+        {
+        return lockedBalances[_addr];
     }
 }

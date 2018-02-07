@@ -17,20 +17,14 @@ contract SeeleCrowdSale is Pausable {
     uint public constant MAX_SALE_DURATION = 1 weeks;
 
     /// Exchange rates
-    uint public constant EXCHANGE_RATE = 1000;
+    uint public  exchangeRate = 12500;
 
-    // uint public constant PRICE_RATE_FIRST = 20833;
-    // /// Exchange rates for second phase
-    // uint public constant PRICE_RATE_SECOND = 18518;
-    // /// Exchange rates for last phase
-    // uint public constant PRICE_RATE_LAST = 16667;
-
-    uint256 public minBuyLimit = 0.1 ether;
-    uint256 public maxBuyLimit = 10 ether;
+    uint256 public minBuyLimit = 0.5 ether;
+    uint256 public maxBuyLimit = 5 ether;
 
     uint public constant MINER_STAKE = 3000;    // for minter
     uint public constant PRE_SALE_STAKE = 3000;    
-    uint public constant OPEN_SALE_STAKE = 2000; 
+    uint public constant OPEN_SALE_STAKE = 625; 
     uint public constant OTHER_STAKE = 2000;     
 
     
@@ -115,11 +109,11 @@ contract SeeleCrowdSale is Pausable {
 
         openSoldTokens = 0;
         /// Create seele token contract instance
-        seeleToken = new SeeleToken(this, msg.sender, SEELE_TOTAL_SUPPLY, startTime, endTime);
+        seeleToken = new SeeleToken(this, msg.sender, SEELE_TOTAL_SUPPLY);
 
-        seeleToken.mint(presaleAddress, PRE_SALE_STAKE * STAKE_MULTIPLIER);
-        seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER);
-        seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER);
+        seeleToken.mint(presaleAddress, PRE_SALE_STAKE * STAKE_MULTIPLIER, false);
+        seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER, false);
+        seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER, false);
     }
 
     function setMaxBuyLimit(uint256 limit)
@@ -136,6 +130,22 @@ contract SeeleCrowdSale is Pausable {
         earlierThan(endTime)
     {
         minBuyLimit = limit;
+    }
+
+    function setExchangeRate(uint256 rate)
+        public
+        onlyOwner
+        earlierThan(endTime)
+    {
+        exchangeRate = rate;
+    }
+
+    function setStartTime(uint _startTime )
+        public
+        onlyOwner
+    {
+        startTime = _startTime;
+        endTime = startTime + MAX_SALE_DURATION;
     }
 
     /// @dev batch set quota for user admin
@@ -225,7 +235,7 @@ contract SeeleCrowdSale is Pausable {
         uint toCollect;
         (toFund, toCollect) = costAndBuyTokens(tokenAvailable);
         if (toFund > 0) {
-            require(seeleToken.mint(receipient, toCollect));         
+            require(seeleToken.mint(receipient, toCollect,true));         
             wallet.transfer(toFund);
             openSoldTokens = openSoldTokens.add(toCollect);
             NewSale(receipient, toFund, toCollect);             
@@ -241,12 +251,12 @@ contract SeeleCrowdSale is Pausable {
     /// @dev Utility function for calculate available tokens and cost ethers
     function costAndBuyTokens(uint availableToken) constant internal returns (uint costValue, uint getTokens) {
         // all conditions has checked in the caller functions
-        getTokens = EXCHANGE_RATE * msg.value;
+        getTokens = exchangeRate * msg.value;
 
         if (availableToken >= getTokens) {
             costValue = msg.value;
         } else {
-            costValue = availableToken / EXCHANGE_RATE;
+            costValue = availableToken / exchangeRate;
             getTokens = availableToken;
         }
     }
