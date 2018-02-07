@@ -338,21 +338,14 @@ contract SeeleToken is PausableToken {
     /// seele sale  contract
     address public minter; 
 
-    /// ICO start time
-    uint public startTime;
-    /// ICO end time
-    uint public endTime;
+    /// Fields that can be changed by functions
+    mapping (address => uint) public lockedBalances;
 
     /*
      * MODIFIERS
      */
     modifier onlyMinter {
         assert(msg.sender == minter);
-        _;
-    }
-
-    modifier isLaterThan (uint x){
-        assert(now > x);
         _;
     }
 
@@ -373,17 +366,13 @@ contract SeeleToken is PausableToken {
      * @dev Initialize the Seele Token
      * @param _minter The SeeleCrowdSale Contract 
      * @param _maxTotalSupply total supply token    
-     * @param _startTime start time
-     * @param _endTime End Time
      */
-    function SeeleToken(address _minter, address _admin, uint _maxTotalSupply, uint _startTime, uint _endTime) 
+    function SeeleToken(address _minter, address _admin, uint _maxTotalSupply) 
         public 
         validAddress(_admin)
         validAddress(_minter)
         {
         minter = _minter;
-        startTime = _startTime;
-        endTime = _endTime;
         totalSupply = _maxTotalSupply;
         transferOwnership(_admin);
     }
@@ -394,19 +383,47 @@ contract SeeleToken is PausableToken {
      * @dev SeeleCrowdSale contract instance mint token
      * @param receipent The destination account owned mint tokens    
      * @param amount The amount of mint token
+     * @param isLock Lock token flag
      * be sent to this address.
      */
 
-    function mint(address receipent, uint amount)
+    function mint(address receipent, uint amount, bool isLock)
         external
         onlyMinter
         maxTokenAmountNotReached(amount)
         returns (bool)
     {
-        require(now <= endTime);
-        balances[receipent] = balances[receipent].add(amount);
+        if (isLock ) {
+            lockedBalances[receipent] = lockedBalances[receipent].add(amount);
+        } else {
+            balances[receipent] = balances[receipent].add(amount);
+        }
         currentSupply = currentSupply.add(amount);
         return true;
+    }
+
+     /*
+     * PUBLIC FUNCTIONS
+     */
+
+    /// @dev Locking period has passed - Locked tokens have turned into tradeable
+    function claimTokens(address receipent)
+        public
+        onlyOwner
+    {
+        balances[receipent] = balances[receipent].add(lockedBalances[receipent]);
+        lockedBalances[receipent] = 0;
+    }
+
+    /*
+     * CONSTANT METHODS, get lock balance of address
+     */
+    function lockedBalanceOf(address _addr) 
+        constant 
+        public
+        returns (uint balance) 
+        {
+        return lockedBalances[_addr];
     }
 }
 
@@ -485,20 +502,14 @@ contract SeeleCrowdSale is Pausable {
     uint public constant MAX_SALE_DURATION = 1 weeks;
 
     /// Exchange rates
-    uint public constant EXCHANGE_RATE = 1000;
+    uint public  exchangeRate = 12500;
 
-    // uint public constant PRICE_RATE_FIRST = 20833;
-    // /// Exchange rates for second phase
-    // uint public constant PRICE_RATE_SECOND = 18518;
-    // /// Exchange rates for last phase
-    // uint public constant PRICE_RATE_LAST = 16667;
-
-    uint256 public minBuyLimit = 0.1 ether;
-    uint256 public maxBuyLimit = 10 ether;
+    uint256 public minBuyLimit = 0.5 ether;
+    uint256 public maxBuyLimit = 5 ether;
 
     uint public constant MINER_STAKE = 3000;    // for minter
     uint public constant PRE_SALE_STAKE = 3000;    
-    uint public constant OPEN_SALE_STAKE = 2000; 
+    uint public constant OPEN_SALE_STAKE = 625; 
     uint public constant OTHER_STAKE = 2000;     
 
     
@@ -583,11 +594,11 @@ contract SeeleCrowdSale is Pausable {
 
         openSoldTokens = 0;
         /// Create seele token contract instance
-        seeleToken = new SeeleToken(this, msg.sender, SEELE_TOTAL_SUPPLY, startTime, endTime);
+        seeleToken = new SeeleToken(this, msg.sender, SEELE_TOTAL_SUPPLY);
 
-        seeleToken.mint(presaleAddress, PRE_SALE_STAKE * STAKE_MULTIPLIER);
-        seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER);
-        seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER);
+        seeleToken.mint(presaleAddress, PRE_SALE_STAKE * STAKE_MULTIPLIER, false);
+        seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER, false);
+        seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER, false);
     }
 
     function setMaxBuyLimit(uint256 limit)
@@ -604,6 +615,22 @@ contract SeeleCrowdSale is Pausable {
         earlierThan(endTime)
     {
         minBuyLimit = limit;
+    }
+
+    function setExchangeRate(uint256 rate)
+        public
+        onlyOwner
+        earlierThan(endTime)
+    {
+        exchangeRate = rate;
+    }
+
+    function setStartTime(uint _startTime )
+        public
+        onlyOwner
+    {
+        startTime = _startTime;
+        endTime = startTime + MAX_SALE_DURATION;
     }
 
     /// @dev batch set quota for user admin
@@ -693,7 +720,7 @@ contract SeeleCrowdSale is Pausable {
         uint toCollect;
         (toFund, toCollect) = costAndBuyTokens(tokenAvailable);
         if (toFund > 0) {
-            require(seeleToken.mint(receipient, toCollect));         
+            require(seeleToken.mint(receipient, toCollect,true));         
             wallet.transfer(toFund);
             openSoldTokens = openSoldTokens.add(toCollect);
             NewSale(receipient, toFund, toCollect);             
@@ -709,12 +736,12 @@ contract SeeleCrowdSale is Pausable {
     /// @dev Utility function for calculate available tokens and cost ethers
     function costAndBuyTokens(uint availableToken) constant internal returns (uint costValue, uint getTokens) {
         // all conditions has checked in the caller functions
-        getTokens = EXCHANGE_RATE * msg.value;
+        getTokens = exchangeRate * msg.value;
 
         if (availableToken >= getTokens) {
             costValue = msg.value;
         } else {
-            costValue = availableToken / EXCHANGE_RATE;
+            costValue = availableToken / exchangeRate;
             getTokens = availableToken;
         }
     }
