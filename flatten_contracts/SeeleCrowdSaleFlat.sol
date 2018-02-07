@@ -508,9 +508,8 @@ contract SeeleCrowdSale is Pausable {
     uint256 public maxBuyLimit = 5 ether;
 
     uint public constant MINER_STAKE = 3000;    // for minter
-    uint public constant PRE_SALE_STAKE = 3000;    
-    uint public constant OPEN_SALE_STAKE = 625; 
-    uint public constant OTHER_STAKE = 2000;     
+    uint public constant OPEN_SALE_STAKE = 625; // for public
+    uint public constant OTHER_STAKE = 6375;    // for others
 
     
     uint public constant DIVISOR_STAKE = 10000;
@@ -521,7 +520,6 @@ contract SeeleCrowdSale is Pausable {
 
     /// All deposited ETH will be instantly forwarded to this address.
     address public wallet;
-    address public presaleAddress;
     address public minerAddress;
     address public otherAddress;
     /// Contribution start time
@@ -577,26 +575,21 @@ contract SeeleCrowdSale is Pausable {
         address _presaleAddress,
         address _minerAddress,
         address _otherAddress,
-        uint _startTime 
         ) public 
         validAddress(_wallet) 
         validAddress(_presaleAddress) 
         validAddress(_minerAddress) 
         validAddress(_otherAddress) 
         {
-
+        paused = true;  
         wallet = _wallet;
-        presaleAddress = _presaleAddress;
         minerAddress = _minerAddress;
         otherAddress = _otherAddress;        
-        startTime = _startTime;
-        endTime = startTime + MAX_SALE_DURATION;
 
         openSoldTokens = 0;
         /// Create seele token contract instance
         seeleToken = new SeeleToken(this, msg.sender, SEELE_TOTAL_SUPPLY);
 
-        seeleToken.mint(presaleAddress, PRE_SALE_STAKE * STAKE_MULTIPLIER, false);
         seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER, false);
         seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER, false);
     }
