@@ -341,11 +341,19 @@ contract SeeleToken is PausableToken {
     /// Fields that can be changed by functions
     mapping (address => uint) public lockedBalances;
 
+    /// claim flag
+    bool public claimedFlag;  
+
     /*
      * MODIFIERS
      */
     modifier onlyMinter {
         assert(msg.sender == minter);
+        _;
+    }
+
+    modifier canClaimed {
+        assert(claimedFlag == true);
         _;
     }
 
@@ -374,6 +382,7 @@ contract SeeleToken is PausableToken {
         {
         minter = _minter;
         totalSupply = _maxTotalSupply;
+        claimedFlag = false;
         transferOwnership(_admin);
     }
 
@@ -402,17 +411,28 @@ contract SeeleToken is PausableToken {
         return true;
     }
 
+
+    function setClaimedFlag(bool flag) 
+        public
+        onlyOwner 
+    {
+        claimedFlag = flag;
+    }
+
      /*
      * PUBLIC FUNCTIONS
      */
 
     /// @dev Locking period has passed - Locked tokens have turned into tradeable
-    function claimTokens(address receipent)
+    function claimTokens(address[] receipents)
         public
-        onlyOwner
-    {
-        balances[receipent] = balances[receipent].add(lockedBalances[receipent]);
-        lockedBalances[receipent] = 0;
+        canClaimed
+    {        
+        for (uint i = 0; i < receipents.length; i++) {
+            address receipent = receipents[i];
+            balances[receipent] = balances[receipent].add(lockedBalances[receipent]);
+            lockedBalances[receipent] = 0;
+        }
     }
 
     /*

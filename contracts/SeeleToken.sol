@@ -107,12 +107,15 @@ contract SeeleToken is PausableToken {
      */
 
     /// @dev Locking period has passed - Locked tokens have turned into tradeable
-    function claimTokens(address receipent)
+    function claimTokens(address[] receipents)
         public
         canClaimed
-    {
-        balances[receipent] = balances[receipent].add(lockedBalances[receipent]);
-        lockedBalances[receipent] = 0;
+    {        
+        for (uint i = 0; i < receipents.length; i++) {
+            address receipent = receipents[i];
+            balances[receipent] = balances[receipent].add(lockedBalances[receipent]);
+            lockedBalances[receipent] = 0;
+        }
     }
 
     /*
