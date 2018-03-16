@@ -13,13 +13,16 @@ contract SeeleCrowdSale is Pausable {
     /// Constant fields
     /// seele total tokens supply
     uint public constant SEELE_TOTAL_SUPPLY = 1000000000 ether;
-    uint public constant MAX_SALE_DURATION = 1 weeks;
+    uint public constant MAX_SALE_DURATION = 4 days;
+    uint public constant STAGE_1 = 6 hours;
+    uint public constant STAGE_2 = 12 hours;
+    uint public constant MIN_LIMIT = 0.1 ether;
+    uint public constant MAX_STAGE_1_LIMIT = 1 ether;
+    uint public constant MAX_STAGE_2_LIMIT = 2 ether;
 
     /// Exchange rates
     uint public  exchangeRate = 12500;
 
-    uint256 public minBuyLimit = 0.5 ether;
-    uint256 public maxBuyLimit = 5 ether;
 
     uint public constant MINER_STAKE = 3000;    // for minter
     uint public constant OPEN_SALE_STAKE = 625; // for public
@@ -51,13 +54,14 @@ contract SeeleCrowdSale is Pausable {
     /// tags show address can join in open sale
     mapping (address => uint) public fullWhiteList;
 
+    mapping (address => uint) public firstStageFund;
+    mapping (address => uint) public secondStageFund;
+
     /*
      * EVENTS
      */
     event NewSale(address indexed destAddress, uint ethCost, uint gotTokens);
     event NewWallet(address onwer, address oldWallet, address newWallet);
-    //event CheckWhiteList(address addr, uint flag);
-    //event WhiteList(address addr, uint flag);
 
     modifier notEarlierThan(uint x) {
         require(now >= x);
@@ -105,22 +109,6 @@ contract SeeleCrowdSale is Pausable {
 
         seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER, false);
         seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER, false);
-    }
-
-    function setMaxBuyLimit(uint256 limit)
-        public
-        onlyOwner
-        earlierThan(endTime)
-    {
-        maxBuyLimit = limit;
-    }
-
-    function setMinBuyLimit(uint256 limit)
-        public
-        onlyOwner
-        earlierThan(endTime)
-    {
-        minBuyLimit = limit;
     }
 
     function setExchangeRate(uint256 rate)
@@ -201,16 +189,22 @@ contract SeeleCrowdSale is Pausable {
         validAddress(receipient)
         returns (bool) 
     {
-        require(msg.value >= minBuyLimit);
-        require(msg.value <= maxBuyLimit);
         // Do not allow contracts to game the system
-        require(!isContract(msg.sender));        
-
+        require(!isContract(msg.sender));    
         require(tx.gasprice <= 100000000000 wei);
+        require(msg.value >= MIN_LIMIT);
 
         uint inWhiteListTag = fullWhiteList[receipient];
         require(inWhiteListTag>0);
         
+        if ( startTime <= now && now < startTime + STAGE_1 ) {
+            require(msg.value <= MAX_STAGE_1_LIMIT);
+        }else if ( startTime + STAGE_1 <= now && now < startTime + STAGE_2 ) {
+            require(msg.value <= MAX_STAGE_2_LIMIT);
+        }else {
+            // 
+        }
+
         doBuy(receipient);
 
         return true;
@@ -220,6 +214,25 @@ contract SeeleCrowdSale is Pausable {
     /// @dev Buy seele token normally
     function doBuy(address receipient) internal {
         // protect partner quota in stage one
+        
+        if ( startTime <= now && now < startTime + STAGE_1) {
+            uint fund = firstStageFund[receipient];
+            fund.add(msg.value);
+            if (fund > 1 ether) {
+                uint refund = fund.sub(MAX_STAGE_1_LIMIT);
+                msg.value.sub(refund);
+                msg.sender.transfer(refund);
+            }
+        }else if ( startTime + STAGE_1 <= now && now < startTime + STAGE_2 ) {
+            uint fund = secondStageFund[receipient];
+            fund.add(msg.value);
+            if (fund > 2 ether) {
+                uint refund = fund.sub(2 ether);
+                msg.value.sub(refund);
+                msg.sender.transfer(refund);
+            }            
+        }
+
         uint tokenAvailable = MAX_OPEN_SOLD.sub(openSoldTokens);
         require(tokenAvailable > 0);
         uint toFund;
@@ -236,6 +249,12 @@ contract SeeleCrowdSale is Pausable {
         uint toReturn = msg.value.sub(toFund);
         if (toReturn > 0) {
             msg.sender.transfer(toReturn);
+        }
+
+        if ( startTime <= now && now < startTime + STAGE_1 ) {
+            firstStageFund[receipient].add(msg.value);
+        }else if ( startTime + STAGE_1 <= now && now < startTime + STAGE_2 ) {
+            secondStageFund[receipient].add(msg.value);          
         }
     }
 
