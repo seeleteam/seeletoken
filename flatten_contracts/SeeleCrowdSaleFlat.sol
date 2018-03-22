@@ -434,17 +434,6 @@ contract SeeleToken is PausableToken {
             lockedBalances[receipent] = 0;
         }
     }
-
-    /*
-     * CONSTANT METHODS, get lock balance of address
-     */
-    function lockedBalanceOf(address _addr) 
-        constant 
-        public
-        returns (uint balance) 
-        {
-        return lockedBalances[_addr];
-    }
 }
 
 // File: contracts/SeeleCrowdSale.sol
@@ -458,13 +447,21 @@ contract SeeleCrowdSale is Pausable {
     /// Constant fields
     /// seele total tokens supply
     uint public constant SEELE_TOTAL_SUPPLY = 1000000000 ether;
-    uint public constant MAX_SALE_DURATION = 1 weeks;
+    uint public constant MAX_SALE_DURATION = 4 days;
+    uint public constant STAGE_1_TIME = 30 minutes;  //6 hours;
+    uint public constant STAGE_2_TIME = 60 minutes; //12 hours;
+    uint public constant MIN_LIMIT = 0.1 ether;
+    uint public constant MAX_STAGE_1_LIMIT = 1 ether;
+    uint public constant MAX_STAGE_2_LIMIT = 2 ether;
+
+    uint public constant STAGE_1 = 1;
+    uint public constant STAGE_2 = 2;
+    uint public constant STAGE_3 = 3;
+
 
     /// Exchange rates
     uint public  exchangeRate = 12500;
 
-    uint256 public minBuyLimit = 0.5 ether;
-    uint256 public maxBuyLimit = 5 ether;
 
     uint public constant MINER_STAKE = 3000;    // for minter
     uint public constant OPEN_SALE_STAKE = 625; // for public
@@ -496,13 +493,15 @@ contract SeeleCrowdSale is Pausable {
     /// tags show address can join in open sale
     mapping (address => uint) public fullWhiteList;
 
+    mapping (address => uint) public firstStageFund;
+    mapping (address => uint) public secondStageFund;
+
     /*
      * EVENTS
      */
     event NewSale(address indexed destAddress, uint ethCost, uint gotTokens);
     event NewWallet(address onwer, address oldWallet, address newWallet);
-    //event CheckWhiteList(address addr, uint flag);
-    //event WhiteList(address addr, uint flag);
+    event NewLog(string name, uint val);
 
     modifier notEarlierThan(uint x) {
         require(now >= x);
@@ -550,22 +549,6 @@ contract SeeleCrowdSale is Pausable {
 
         seeleToken.mint(minerAddress, MINER_STAKE * STAKE_MULTIPLIER, false);
         seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER, false);
-    }
-
-    function setMaxBuyLimit(uint256 limit)
-        public
-        onlyOwner
-        earlierThan(endTime)
-    {
-        maxBuyLimit = limit;
-    }
-
-    function setMinBuyLimit(uint256 limit)
-        public
-        onlyOwner
-        earlierThan(endTime)
-    {
-        minBuyLimit = limit;
     }
 
     function setExchangeRate(uint256 rate)
@@ -629,7 +612,7 @@ contract SeeleCrowdSale is Pausable {
      * @dev If anybody sends Ether directly to this  contract, consider he is getting seele token
      */
     function () public payable {
-      buySeele(msg.sender);
+        buySeele(msg.sender);
     }
 
     /*
@@ -646,30 +629,61 @@ contract SeeleCrowdSale is Pausable {
         validAddress(receipient)
         returns (bool) 
     {
-        require(msg.value >= minBuyLimit);
-        require(msg.value <= maxBuyLimit);
         // Do not allow contracts to game the system
-        require(!isContract(msg.sender));        
-
+        require(!isContract(msg.sender));    
         require(tx.gasprice <= 100000000000 wei);
+        require(msg.value >= MIN_LIMIT);
 
-        uint inWhiteListTag = fullWhiteList[receipient];
+        uint inWhiteListTag = fullWhiteList[receipient];       
         require(inWhiteListTag>0);
-        
-        doBuy(receipient);
+
+        uint stage = STAGE_3;
+        if ( startTime <= now && now < startTime + STAGE_1_TIME ) {
+            stage = STAGE_1;
+            require(msg.value <= MAX_STAGE_1_LIMIT);
+        }else if ( startTime + STAGE_1_TIME <= now && now < startTime + STAGE_2_TIME ) {
+            stage = STAGE_2;
+            require(msg.value <= MAX_STAGE_2_LIMIT);
+        }
+
+        NewLog("receipient stage", stage);
+        doBuy(receipient, stage);
 
         return true;
     }
 
 
     /// @dev Buy seele token normally
-    function doBuy(address receipient) internal {
+    function doBuy(address receipient, uint stage) internal {
         // protect partner quota in stage one
+        uint value = msg.value;
+
+        if ( stage == STAGE_1 ) {
+            uint fund1 = firstStageFund[receipient];
+            NewLog("stage1 fund1", fund1);
+            fund1 = fund1.add(value);
+            NewLog("stage1 add value fund1", fund1);
+            if (fund1 > MAX_STAGE_1_LIMIT ) {
+                NewLog("stage1 fund1 too big", fund1);
+                uint refund1 = fund1.sub(MAX_STAGE_1_LIMIT);
+                value = value.sub(refund1);
+                msg.sender.transfer(refund1);
+            }
+        }else if ( stage == STAGE_2 ) {
+            uint fund2 = secondStageFund[receipient];
+            fund2 = fund2.add(value);
+            if (fund2 > MAX_STAGE_2_LIMIT) {
+                uint refund2 = fund2.sub(MAX_STAGE_2_LIMIT);
+                value = value.sub(refund2);
+                msg.sender.transfer(refund2);
+            }            
+        }
+
         uint tokenAvailable = MAX_OPEN_SOLD.sub(openSoldTokens);
         require(tokenAvailable > 0);
         uint toFund;
         uint toCollect;
-        (toFund, toCollect) = costAndBuyTokens(tokenAvailable);
+        (toFund, toCollect) = costAndBuyTokens(tokenAvailable, value);
         if (toFund > 0) {
             require(seeleToken.mint(receipient, toCollect,true));         
             wallet.transfer(toFund);
@@ -678,19 +692,25 @@ contract SeeleCrowdSale is Pausable {
         }
 
         // not enough token sale, just return eth
-        uint toReturn = msg.value.sub(toFund);
+        uint toReturn = value.sub(toFund);
         if (toReturn > 0) {
             msg.sender.transfer(toReturn);
+        }
+
+        if ( stage == STAGE_1 ) {
+            firstStageFund[receipient] = firstStageFund[receipient].add(toFund);
+        }else if ( stage == STAGE_2 ) {
+            secondStageFund[receipient] = secondStageFund[receipient].add(toFund);          
         }
     }
 
     /// @dev Utility function for calculate available tokens and cost ethers
-    function costAndBuyTokens(uint availableToken) constant internal returns (uint costValue, uint getTokens) {
+    function costAndBuyTokens(uint availableToken, uint value) constant internal returns (uint costValue, uint getTokens) {
         // all conditions has checked in the caller functions
-        getTokens = exchangeRate * msg.value;
+        getTokens = exchangeRate * value;
 
         if (availableToken >= getTokens) {
-            costValue = msg.value;
+            costValue = value;
         } else {
             costValue = availableToken / exchangeRate;
             getTokens = availableToken;

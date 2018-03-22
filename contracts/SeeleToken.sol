@@ -117,15 +117,4 @@ contract SeeleToken is PausableToken {
             lockedBalances[receipent] = 0;
         }
     }
-
-    /*
-     * CONSTANT METHODS, get lock balance of address
-     */
-    function lockedBalanceOf(address _addr) 
-        constant 
-        public
-        returns (uint balance) 
-        {
-        return lockedBalances[_addr];
-    }
 }
