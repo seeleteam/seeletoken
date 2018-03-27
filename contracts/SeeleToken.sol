@@ -31,17 +31,17 @@ contract SeeleToken is PausableToken {
      * MODIFIERS
      */
     modifier onlyMinter {
-        assert(msg.sender == minter);
+        require(msg.sender == minter);
         _;
     }
 
     modifier canClaimed {
-        assert(claimedFlag == true);
+        require(claimedFlag == true);
         _;
     }
 
     modifier maxTokenAmountNotReached (uint amount){
-        assert(currentSupply.add(amount) <= totalSupply);
+        require(currentSupply.add(amount) <= totalSupply);
         _;
     }
 

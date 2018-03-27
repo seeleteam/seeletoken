@@ -348,17 +348,17 @@ contract SeeleToken is PausableToken {
      * MODIFIERS
      */
     modifier onlyMinter {
-        assert(msg.sender == minter);
+        require(msg.sender == minter);
         _;
     }
 
     modifier canClaimed {
-        assert(claimedFlag == true);
+        require(claimedFlag == true);
         _;
     }
 
     modifier maxTokenAmountNotReached (uint amount){
-        assert(currentSupply.add(amount) <= totalSupply);
+        require(currentSupply.add(amount) <= totalSupply);
         _;
     }
 
@@ -448,8 +448,8 @@ contract SeeleCrowdSale is Pausable {
     /// seele total tokens supply
     uint public constant SEELE_TOTAL_SUPPLY = 1000000000 ether;
     uint public constant MAX_SALE_DURATION = 4 days;
-    uint public constant STAGE_1_TIME = 30 minutes;  //6 hours;
-    uint public constant STAGE_2_TIME = 60 minutes; //12 hours;
+    uint public constant STAGE_1_TIME =  6 hours;
+    uint public constant STAGE_2_TIME = 12 hours;
     uint public constant MIN_LIMIT = 0.1 ether;
     uint public constant MAX_STAGE_1_LIMIT = 1 ether;
     uint public constant MAX_STAGE_2_LIMIT = 2 ether;
@@ -491,7 +491,7 @@ contract SeeleCrowdSale is Pausable {
     SeeleToken public seeleToken; 
 
     /// tags show address can join in open sale
-    mapping (address => uint) public fullWhiteList;
+    mapping (address => bool) public fullWhiteList;
 
     mapping (address => uint) public firstStageFund;
     mapping (address => uint) public secondStageFund;
@@ -501,7 +501,6 @@ contract SeeleCrowdSale is Pausable {
      */
     event NewSale(address indexed destAddress, uint ethCost, uint gotTokens);
     event NewWallet(address onwer, address oldWallet, address newWallet);
-    event NewLog(string name, uint val);
 
     modifier notEarlierThan(uint x) {
         require(now >= x);
@@ -569,14 +568,13 @@ contract SeeleCrowdSale is Pausable {
 
     /// @dev batch set quota for user admin
     /// if openTag <=0, removed 
-    function setWhiteList(address[] users, uint openTag)
-        public
+    function setWhiteList(address[] users, bool openTag)
+        external
         onlyOwner
         earlierThan(endTime)
     {
         require(saleNotEnd());
         for (uint i = 0; i < users.length; i++) {
-            //WhiteList(users[i], openTag);
             fullWhiteList[users[i]] = openTag;
         }
     }
@@ -584,13 +582,12 @@ contract SeeleCrowdSale is Pausable {
 
     /// @dev batch set quota for early user quota
     /// if openTag <=0, removed 
-    function addWhiteList(address user, uint openTag)
-        public
+    function addWhiteList(address user, bool openTag)
+        external
         onlyOwner
         earlierThan(endTime)
     {
         require(saleNotEnd());
-        //WhiteList(user, openTag);
         fullWhiteList[user] = openTag;
 
     }
@@ -621,10 +618,10 @@ contract SeeleCrowdSale is Pausable {
     /// @dev Exchange msg.value ether to Seele for account recepient
     /// @param receipient Seele tokens receiver
     function buySeele(address receipient) 
-        public 
-        payable 
+        internal 
         whenNotPaused  
         ceilingNotReached 
+        notEarlierThan(startTime)
         earlierThan(endTime)
         validAddress(receipient)
         returns (bool) 
@@ -634,8 +631,8 @@ contract SeeleCrowdSale is Pausable {
         require(tx.gasprice <= 100000000000 wei);
         require(msg.value >= MIN_LIMIT);
 
-        uint inWhiteListTag = fullWhiteList[receipient];       
-        require(inWhiteListTag>0);
+        bool inWhiteListTag = fullWhiteList[receipient];       
+        require(inWhiteListTag == true);
 
         uint stage = STAGE_3;
         if ( startTime <= now && now < startTime + STAGE_1_TIME ) {
@@ -646,7 +643,6 @@ contract SeeleCrowdSale is Pausable {
             require(msg.value <= MAX_STAGE_2_LIMIT);
         }
 
-        NewLog("receipient stage", stage);
         doBuy(receipient, stage);
 
         return true;
@@ -660,11 +656,8 @@ contract SeeleCrowdSale is Pausable {
 
         if ( stage == STAGE_1 ) {
             uint fund1 = firstStageFund[receipient];
-            NewLog("stage1 fund1", fund1);
             fund1 = fund1.add(value);
-            NewLog("stage1 add value fund1", fund1);
             if (fund1 > MAX_STAGE_1_LIMIT ) {
-                NewLog("stage1 fund1 too big", fund1);
                 uint refund1 = fund1.sub(MAX_STAGE_1_LIMIT);
                 value = value.sub(refund1);
                 msg.sender.transfer(refund1);

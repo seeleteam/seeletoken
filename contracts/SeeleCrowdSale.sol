@@ -57,7 +57,7 @@ contract SeeleCrowdSale is Pausable {
     SeeleToken public seeleToken; 
 
     /// tags show address can join in open sale
-    mapping (address => uint) public fullWhiteList;
+    mapping (address => bool) public fullWhiteList;
 
     mapping (address => uint) public firstStageFund;
     mapping (address => uint) public secondStageFund;
@@ -134,14 +134,13 @@ contract SeeleCrowdSale is Pausable {
 
     /// @dev batch set quota for user admin
     /// if openTag <=0, removed 
-    function setWhiteList(address[] users, uint openTag)
-        public
+    function setWhiteList(address[] users, bool openTag)
+        external
         onlyOwner
         earlierThan(endTime)
     {
         require(saleNotEnd());
         for (uint i = 0; i < users.length; i++) {
-            //WhiteList(users[i], openTag);
             fullWhiteList[users[i]] = openTag;
         }
     }
@@ -149,13 +148,12 @@ contract SeeleCrowdSale is Pausable {
 
     /// @dev batch set quota for early user quota
     /// if openTag <=0, removed 
-    function addWhiteList(address user, uint openTag)
-        public
+    function addWhiteList(address user, bool openTag)
+        external
         onlyOwner
         earlierThan(endTime)
     {
         require(saleNotEnd());
-        //WhiteList(user, openTag);
         fullWhiteList[user] = openTag;
 
     }
@@ -186,10 +184,10 @@ contract SeeleCrowdSale is Pausable {
     /// @dev Exchange msg.value ether to Seele for account recepient
     /// @param receipient Seele tokens receiver
     function buySeele(address receipient) 
-        public 
-        payable 
+        internal 
         whenNotPaused  
         ceilingNotReached 
+        notEarlierThan(startTime)
         earlierThan(endTime)
         validAddress(receipient)
         returns (bool) 
@@ -199,8 +197,8 @@ contract SeeleCrowdSale is Pausable {
         require(tx.gasprice <= 100000000000 wei);
         require(msg.value >= MIN_LIMIT);
 
-        uint inWhiteListTag = fullWhiteList[receipient];       
-        require(inWhiteListTag>0);
+        bool inWhiteListTag = fullWhiteList[receipient];       
+        require(inWhiteListTag == true);
 
         uint stage = STAGE_3;
         if ( startTime <= now && now < startTime + STAGE_1_TIME ) {
