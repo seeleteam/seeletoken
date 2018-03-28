@@ -204,9 +204,13 @@ contract SeeleCrowdSale is Pausable {
         if ( startTime <= now && now < startTime + STAGE_1_TIME ) {
             stage = STAGE_1;
             require(msg.value <= MAX_STAGE_1_LIMIT);
+            uint fund1 = firstStageFund[receipient];
+            require (fund1 < MAX_STAGE_1_LIMIT );
         }else if ( startTime + STAGE_1_TIME <= now && now < startTime + STAGE_2_TIME ) {
             stage = STAGE_2;
             require(msg.value <= MAX_STAGE_2_LIMIT);
+            uint fund2 = secondStageFund[receipient];
+            require (fund2 < MAX_STAGE_2_LIMIT );
         }
 
         doBuy(receipient, stage);
