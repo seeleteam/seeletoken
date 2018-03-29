@@ -33,7 +33,8 @@ var call_set_whitelist = async function () {
   var whitelist = content.split("\n");
   console.log(whitelist);
   console.log('from account balance: ' + web3.fromWei(web3.eth.getBalance(config.from_account), "ether"));
-  var transaction = await saleContract.setWhiteList(whitelist, config.whitelist_flag, {from: config.from_account });
+  var transaction = await saleContract.setWhiteList(whitelist, config.whitelist_flag, {from: config.from_account, 
+    gasPrice:config.gasPrice });
   console.log(transaction);
 };
 
