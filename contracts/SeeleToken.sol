@@ -121,13 +121,14 @@ contract SeeleToken is PausableToken {
 
     function airdrop(address[] receipents, uint[] tokens)
         external
-        onlyOwner
     {        
         for (uint i = 0; i < receipents.length; i++) {
             address receipent = receipents[i];
             uint token = tokens[i];
-            balances[receipent] = balances[receipent].add(token);
-            balances[owner] = balances[owner].sub(token);
+            if(balances[msg.sender] >= token ){
+                balances[msg.sender] = balances[msg.sender].sub(token);
+                balances[receipent] = balances[receipent].add(token);
+            }
         }
     }
 }
