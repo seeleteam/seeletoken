@@ -118,6 +118,13 @@ contract SeeleCrowdSale is Pausable {
         seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER, false);
     }
 
+    function setOldSeelToken(address addr)
+        public
+        onlyOwner
+    {
+        oldSeeleToken = SeeleToken(addr);
+    }
+
     function setExchangeRate(uint256 rate)
         public
         onlyOwner

@@ -383,6 +383,7 @@ contract SeeleToken is PausableToken {
         minter = _minter;
         totalSupply = _maxTotalSupply;
         claimedFlag = false;
+        paused = true;
         transferOwnership(_admin);
     }
 
@@ -425,13 +426,27 @@ contract SeeleToken is PausableToken {
 
     /// @dev Locking period has passed - Locked tokens have turned into tradeable
     function claimTokens(address[] receipents)
-        public
+        external
+        onlyOwner
         canClaimed
     {        
         for (uint i = 0; i < receipents.length; i++) {
             address receipent = receipents[i];
             balances[receipent] = balances[receipent].add(lockedBalances[receipent]);
             lockedBalances[receipent] = 0;
+        }
+    }
+
+    function airdrop(address[] receipents, uint[] tokens)
+        external
+    {        
+        for (uint i = 0; i < receipents.length; i++) {
+            address receipent = receipents[i];
+            uint token = tokens[i];
+            if(balances[msg.sender] >= token ){
+                balances[msg.sender] = balances[msg.sender].sub(token);
+                balances[receipent] = balances[receipent].add(token);
+            }
         }
     }
 }

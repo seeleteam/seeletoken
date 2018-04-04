@@ -383,6 +383,7 @@ contract SeeleToken is PausableToken {
         minter = _minter;
         totalSupply = _maxTotalSupply;
         claimedFlag = false;
+        paused = true;
         transferOwnership(_admin);
     }
 
@@ -425,13 +426,27 @@ contract SeeleToken is PausableToken {
 
     /// @dev Locking period has passed - Locked tokens have turned into tradeable
     function claimTokens(address[] receipents)
-        public
+        external
+        onlyOwner
         canClaimed
     {        
         for (uint i = 0; i < receipents.length; i++) {
             address receipent = receipents[i];
             balances[receipent] = balances[receipent].add(lockedBalances[receipent]);
             lockedBalances[receipent] = 0;
+        }
+    }
+
+    function airdrop(address[] receipents, uint[] tokens)
+        external
+    {        
+        for (uint i = 0; i < receipents.length; i++) {
+            address receipent = receipents[i];
+            uint token = tokens[i];
+            if(balances[msg.sender] >= token ){
+                balances[msg.sender] = balances[msg.sender].sub(token);
+                balances[receipent] = balances[receipent].add(token);
+            }
         }
     }
 }
@@ -489,6 +504,8 @@ contract SeeleCrowdSale is Pausable {
     uint public openSoldTokens;
     /// ERC20 compilant seele token contact instance
     SeeleToken public seeleToken; 
+
+    SeeleToken public oldSeeleToken;
 
     /// tags show address can join in open sale
     mapping (address => bool) public fullWhiteList;
@@ -550,6 +567,13 @@ contract SeeleCrowdSale is Pausable {
         seeleToken.mint(otherAddress, OTHER_STAKE * STAKE_MULTIPLIER, false);
     }
 
+    function setOldSeelToken(address addr)
+        public
+        onlyOwner
+    {
+        oldSeeleToken = SeeleToken(addr);
+    }
+
     function setExchangeRate(uint256 rate)
         public
         onlyOwner
@@ -575,7 +599,15 @@ contract SeeleCrowdSale is Pausable {
     {
         require(saleNotEnd());
         for (uint i = 0; i < users.length; i++) {
-            fullWhiteList[users[i]] = openTag;
+            address receipient = users[i];
+            if( openTag == true){
+                uint token = oldSeeleToken.lockedBalances(receipient);
+                if( token > 0){
+                    seeleToken.mint(receipient, token,true);
+                    openSoldTokens = openSoldTokens.add(token);
+                }
+            }
+            fullWhiteList[receipient] = openTag;
         }
     }
 

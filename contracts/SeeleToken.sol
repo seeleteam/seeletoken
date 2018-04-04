@@ -66,6 +66,7 @@ contract SeeleToken is PausableToken {
         minter = _minter;
         totalSupply = _maxTotalSupply;
         claimedFlag = false;
+        paused = true;
         transferOwnership(_admin);
     }
 
