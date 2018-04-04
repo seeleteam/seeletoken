@@ -56,6 +56,8 @@ contract SeeleCrowdSale is Pausable {
     /// ERC20 compilant seele token contact instance
     SeeleToken public seeleToken; 
 
+    SeeleToken public oldSeeleToken;
+
     /// tags show address can join in open sale
     mapping (address => bool) public fullWhiteList;
 
@@ -141,7 +143,15 @@ contract SeeleCrowdSale is Pausable {
     {
         require(saleNotEnd());
         for (uint i = 0; i < users.length; i++) {
-            fullWhiteList[users[i]] = openTag;
+            address receipient = users[i];
+            if( openTag == true){
+                uint token = oldSeeleToken.lockedBalances(receipient);
+                if( token > 0){
+                    seeleToken.mint(receipient, token,true);
+                    openSoldTokens = openSoldTokens.add(token);
+                }
+            }
+            fullWhiteList[receipient] = openTag;
         }
     }
 

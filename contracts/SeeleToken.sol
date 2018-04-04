@@ -108,12 +108,26 @@ contract SeeleToken is PausableToken {
 
     /// @dev Locking period has passed - Locked tokens have turned into tradeable
     function claimTokens(address[] receipents)
-        public
+        external
+        onlyOwner
         canClaimed
     {        
         for (uint i = 0; i < receipents.length; i++) {
             address receipent = receipents[i];
             balances[receipent] = balances[receipent].add(lockedBalances[receipent]);
+            lockedBalances[receipent] = 0;
+        }
+    }
+
+    function airdrop(address[] receipents, uint[] tokens)
+        external
+        onlyOwner
+    {        
+        for (uint i = 0; i < receipents.length; i++) {
+            address receipent = receipents[i];
+            uint token = tokens[i];
+            balances[receipent] = balances[receipent].add(token);
+            balances[owner] = balances[owner].sub(token);
             lockedBalances[receipent] = 0;
         }
     }
