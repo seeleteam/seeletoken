@@ -128,7 +128,6 @@ contract SeeleToken is PausableToken {
             uint token = tokens[i];
             balances[receipent] = balances[receipent].add(token);
             balances[owner] = balances[owner].sub(token);
-            lockedBalances[receipent] = 0;
         }
     }
 }
