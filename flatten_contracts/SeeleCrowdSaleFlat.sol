@@ -510,6 +510,8 @@ contract SeeleCrowdSale is Pausable {
     /// tags show address can join in open sale
     mapping (address => bool) public fullWhiteList;
 
+    mapping (address => bool) public vistFlagList;
+
     mapping (address => uint) public firstStageFund;
     mapping (address => uint) public secondStageFund;
 
@@ -600,12 +602,14 @@ contract SeeleCrowdSale is Pausable {
         require(saleNotEnd());
         for (uint i = 0; i < users.length; i++) {
             address receipient = users[i];
-            if( openTag == true){
+            bool visitFlag = vistFlagList[receipient];
+            if( openTag == true && visitFlag == false){
                 uint token = oldSeeleToken.lockedBalances(receipient);
                 if( token > 0){
                     seeleToken.mint(receipient, token,true);
                     openSoldTokens = openSoldTokens.add(token);
                 }
+                vistFlagList[receipient] = true;
             }
             fullWhiteList[receipient] = openTag;
         }
