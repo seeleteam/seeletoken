@@ -34,13 +34,13 @@ var call_set_whitelist = async function () {
   console.log(whitelist);
   console.log('from account balance: ' + web3.fromWei(web3.eth.getBalance(config.from_account), "ether"));
   var transaction = await saleContract.setWhiteList(whitelist, config.whitelist_flag, {from: config.from_account, 
-    gasPrice:config.gasPrice });
+    gasPrice:config.gasPrice, gas:config.gasLimit });
   console.log(transaction);
 };
 
 module.exports = function (callback) {
   console.log('tool start')
-  console.log(web3.eth.accounts)
+  //console.log(web3.eth.accounts)
   var unlock = web3.personal.unlockAccount(config.from_account, config.from_account_password);
   console.log(unlock);
   call_set_whitelist();

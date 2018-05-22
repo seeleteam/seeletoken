@@ -4,3 +4,4 @@ tools/config.js
 tools/whitelist.txt
 tools/whitelist.txt
 tools/reclaim.txt
+*.txt
