@@ -86,7 +86,7 @@ contract SeeleTokenLock is Ownable {
     }
 
     /**
-    * @notice Transfers tokens held by timelock to beneficiary.
+    * @notice Transfers tokens held by timelock to private.
     */
     function unlockPrivate() public locked {
         require(block.timestamp >= privateReleaseTime);
@@ -97,7 +97,7 @@ contract SeeleTokenLock is Ownable {
     }
 
     /**
-    * @notice Transfers tokens held by timelock to beneficiary.
+    * @notice Transfers tokens held by timelock to miner.
     */
     function unlockMiner() public locked {
         require(block.timestamp >= minerRelaseTime);
