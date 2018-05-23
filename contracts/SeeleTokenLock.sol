@@ -6,9 +6,8 @@ import 'zeppelin-solidity/contracts/ownership/Ownable.sol';
 import './SeeleToken.sol';
 
 /**
- * @title SeeleTokenTimelock
- * @dev TokenTimelock is a token holder contract that will allow a
- * beneficiary to extract the tokens after a given release time
+ * @title SeeleTokenLock
+ * @dev SeeleTokenLock for lock some seele token
  */
 contract SeeleTokenLock is Ownable {
     using SafeMath for uint;
@@ -17,8 +16,8 @@ contract SeeleTokenLock is Ownable {
     SeeleToken public token;
 
     // timestamp when token release is enabled
-    uint public privateLockTime =  90 days;
-    uint public minerLockTime = 140 days;
+    uint public privateLockTime =  1 minutes; //90 days;
+    uint public minerLockTime = 2 minutes; // 140 days;
     
     // release time
     uint public privateReleaseTime = 0;
