@@ -465,7 +465,7 @@ contract SeeleTokenLock is Ownable {
     SeeleToken public token;
 
     // timestamp when token release is enabled
-    uint public privateLockTime = 90 days;
+    uint public privateLockTime =  90 days;
     uint public minerLockTime = 140 days;
     
     // release time
@@ -498,13 +498,14 @@ contract SeeleTokenLock is Ownable {
         _;
     }
 
-    function TokenTimelock(ERC20 _token, address _privateLockAddress,  address _minerLockAddress) 
+    function SeeleTokenLock(address _seeleToken, address _privateLockAddress,  address _minerLockAddress) 
         public 
+        validAddress(_seeleToken)
         validAddress(_privateLockAddress)
         validAddress(_minerLockAddress) 
         {
 
-        token = SeeleToken(_token);
+        token = SeeleToken(_seeleToken);
         privateLockAddress = _privateLockAddress;
         minerLockAddress = _minerLockAddress;
     }
@@ -534,24 +535,34 @@ contract SeeleTokenLock is Ownable {
     }
 
     /**
-    * @notice Transfers tokens held by timelock to beneficiary.
+    * @notice Transfers tokens held by timelock to private.
     */
-    function unlockPrivate() public locked {
+    function unlockPrivate() public 
+        locked 
+        onlyOwner
+        {
         require(block.timestamp >= privateReleaseTime);
-
+        require(privateLockedAmount > 0);
         uint256 amount = token.balanceOf(this);
         require(amount >= privateLockedAmount);
         token.transfer(privateLockAddress, privateLockedAmount);
+
+        privateLockedAmount = 0;
     }
 
     /**
-    * @notice Transfers tokens held by timelock to beneficiary.
+    * @notice Transfers tokens held by timelock to miner.
     */
-    function unlockMiner() public locked {
+    function unlockMiner() public 
+        locked 
+        onlyOwner
+        {
         require(block.timestamp >= minerRelaseTime);
-
+        require(minerLockedAmount > 0);
         uint256 amount = token.balanceOf(this);
         require(amount >= minerLockedAmount);
         token.transfer(minerLockAddress, minerLockedAmount);
+
+        minerLockedAmount = 0;
     }
 }
