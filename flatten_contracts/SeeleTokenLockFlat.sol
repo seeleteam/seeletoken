@@ -464,9 +464,9 @@ contract SeeleTokenLock is Ownable {
     SeeleToken public token;
 
     // timestamp when token release is enabled
-    uint public firstPrivateLockTime =   2 minutes;// 90 days;
-    uint public secondPrivateLockTime = 4 minutes; // 180 days;
-    uint public minerLockTime = 5 minutes; //140 days;
+    uint public firstPrivateLockTime =  90 days;
+    uint public secondPrivateLockTime = 180 days;
+    uint public minerLockTime = 140 days;
     
     // release time
     uint public firstPrivateReleaseTime = 0;
