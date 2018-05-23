@@ -16,15 +16,18 @@ contract SeeleTokenLock is Ownable {
     SeeleToken public token;
 
     // timestamp when token release is enabled
-    uint public privateLockTime =  90 days;
-    uint public minerLockTime = 140 days;
+    uint public firstPrivateLockTime =   2 minutes;// 90 days;
+    uint public secondPrivateLockTime = 4 minutes; // 180 days;
+    uint public minerLockTime = 5 minutes; //140 days;
     
     // release time
-    uint public privateReleaseTime = 0;
+    uint public firstPrivateReleaseTime = 0;
+    uint public secondPrivateReleaseTime = 0;
     uint public minerRelaseTime = 0;
     
     // amount
-    uint public privateLockedAmount = 200000000 ether;
+    uint public firstPrivateLockedAmount = 100000000 ether;
+    uint public secondPrivateLockedAmount = 100000000 ether;
     uint public minerLockedAmount = 300000000 ether;
 
     address public privateLockAddress;
@@ -76,29 +79,52 @@ contract SeeleTokenLock is Ownable {
         notLocked 
         onlyOwner 
         {
-        uint totalLockedAmount = privateLockedAmount.add(minerLockedAmount);
+            
+        uint totalLockedAmount = firstPrivateLockedAmount.add(secondPrivateLockedAmount);
+        totalLockedAmount = totalLockedAmount.add(minerLockedAmount);
+
         require(token.balanceOf(address(this)) == totalLockedAmount);
         
         lockedAt = block.timestamp;
 
-        privateReleaseTime = lockedAt.add(privateLockTime);
+        firstPrivateReleaseTime = lockedAt.add(firstPrivateLockTime);
+        secondPrivateReleaseTime = lockedAt.add(secondPrivateLockTime);
         minerRelaseTime = lockedAt.add(minerLockTime);
     }
 
     /**
     * @notice Transfers tokens held by timelock to private.
     */
-    function unlockPrivate() public 
+    function unlockFirstPrivate() public 
         locked 
         onlyOwner
         {
-        require(block.timestamp >= privateReleaseTime);
-        require(privateLockedAmount > 0);
-        uint256 amount = token.balanceOf(this);
-        require(amount >= privateLockedAmount);
-        token.transfer(privateLockAddress, privateLockedAmount);
+        require(block.timestamp >= firstPrivateReleaseTime);
+        require(firstPrivateLockedAmount > 0);
 
-        privateLockedAmount = 0;
+        uint256 amount = token.balanceOf(this);
+        require(amount >= firstPrivateLockedAmount);
+
+        token.transfer(privateLockAddress, firstPrivateLockedAmount);
+        firstPrivateLockedAmount = 0;
+    }
+
+
+    /**
+    * @notice Transfers tokens held by timelock to private.
+    */
+    function unlockSecondPrivate() public 
+        locked 
+        onlyOwner
+        {
+        require(block.timestamp >= secondPrivateReleaseTime);
+        require(secondPrivateLockedAmount > 0);
+
+        uint256 amount = token.balanceOf(this);
+        require(amount >= secondPrivateLockedAmount);
+
+        token.transfer(privateLockAddress, secondPrivateLockedAmount);
+        secondPrivateLockedAmount = 0;
     }
 
     /**
