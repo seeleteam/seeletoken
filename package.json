@@ -16,6 +16,8 @@
     "lite-server": "^2.3.0"
   },
   "dependencies": {
+    "bignumber": "^1.1.0",
+    "bignumber.js": "^7.2.0",
     "zeppelin-solidity": "^1.4.0"
   },
   "repository": {

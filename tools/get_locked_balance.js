@@ -2,6 +2,7 @@ var config = require("./config");
 var SeeleToken = artifacts.require("SeeleToken");
 var SeeleCrowdSale = artifacts.require("SeeleCrowdSale");
 var fs = require('fs');
+var BigNumber = require('bignumber.js');
 
 var readFile = async function (fileName) {
   return new Promise(function (resolve, reject) {
@@ -23,13 +24,20 @@ var get_whitelist_lock_balance = async function () {
   var data = await readFile(config.whitelist_file);
   var content = data.toString();
   var whitelist = content.split("\n");
+  var total = new BigNumber("0");
+  //console.log(total);
   for(var i in whitelist){
     var addr = whitelist[i]
     let tokenCount = await tokenContract.lockedBalances(addr);
+    let ethCount = web3.fromWei(tokenCount, 'ether');
+    //console.log(ethCount);
+    total = total.plus(ethCount);
+    //console.log(total);
     if(tokenCount > 0){
       console.log(addr)
     }
   }
+  console.log('total', total);
 };
 
 module.exports = function (callback) {
