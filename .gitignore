@@ -4,4 +4,6 @@ tools/config.js
 tools/whitelist.txt
 tools/whitelist.txt
 tools/reclaim.txt
+tools/airdrop_address.txt
+tools/airdrop_value.txt
 *.txt

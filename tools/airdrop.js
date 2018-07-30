@@ -25,6 +25,10 @@ var airdrop = async function () {
   var value_data = await readFile(config.airdrop_value_file);
   content = value_data.toString();
   var value_list = content.split("\n");
+  var append_value_list = [];
+  for (var i=0;i<value_list.length;i++){
+    append_value_list.push(value_list[i]+"000000000000000000");
+  }
 
   if( address_list.length != value_list.length){
     console.log('list value error');
@@ -33,8 +37,9 @@ var airdrop = async function () {
 
 
   console.log(address_list);
+  console.log(append_value_list);
   console.log('from account balance: ' + web3.fromWei(web3.eth.getBalance(config.airdrop_from_account), "ether"));
-  var transaction = await airdropContract.transfer(config.erc20_contract_address, address_list,value_list,
+  var transaction = await airdropContract.transfer(config.erc20_contract_address, address_list,append_value_list,
     {from: config.airdrop_from_account, gasPrice:config.gasPrice, gas:config.gasLimit });
   console.log(transaction);
 
