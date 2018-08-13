@@ -17,12 +17,12 @@ contract AirDropContract{
         public 
         validAddress(contract_address)
         returns (bool){
-            
+
         require(tos.length > 0);
         require(vs.length > 0);
         require(tos.length == vs.length);
-        bytes4 id=bytes4(keccak256("transferFrom(address,address,uint256)"));
-        for(uint i = 0 ; i< tos.length; i++){
+        bytes4 id = bytes4(keccak256("transferFrom(address,address,uint256)"));
+        for(uint i = 0 ; i < tos.length; i++){
             contract_address.call(id, msg.sender, tos[i], vs[i]);
         }
         return true;

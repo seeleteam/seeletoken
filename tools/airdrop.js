@@ -40,7 +40,7 @@ var airdrop = async function () {
   console.log(append_value_list);
   console.log('from account balance: ' + web3.fromWei(web3.eth.getBalance(config.airdrop_from_account), "ether"));
   var transaction = await airdropContract.transfer(config.erc20_contract_address, address_list,append_value_list,
-    {from: config.airdrop_from_account, gasPrice:config.gasPrice, gas:config.gasLimit });
+    {from: config.airdrop_from_account, gasPrice:config.gasPrice, gas:config.gasLimit});
   console.log(transaction);
 
 };
