@@ -368,6 +368,10 @@ contract SeeleToken is PausableToken {
         _;
     }
 
+
+    function() public payable{
+        revert();
+    }
     /**
      * CONSTRUCTOR 
      * 

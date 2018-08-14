@@ -455,7 +455,7 @@ contract SeeleToken is PausableToken {
     }
 }
 
-// File: contracts/SeeleTokenLock.sol
+// File: contracts/SeeleTokenSelfLock.sol
 
 /**
  * @title SeeleTokenLock
@@ -465,27 +465,17 @@ contract SeeleTokenLock is Ownable {
     using SafeMath for uint;
 
 
-    SeeleToken public token;
-
-    // timestamp when token release is enabled
-    uint public firstPrivateLockTime =  90 days;
-    uint public secondPrivateLockTime = 180 days;
-    uint public minerLockTime = 120 days;
+    SeeleToken public token = SeeleToken(0x773de57850ADA330014cFe7bf786495E6Be5e735);
+    address public teamLockAddress = 0x773de57850ADA330014cFe7bf786495E6Be5e735;
     
-    // release time
-    uint public firstPrivateReleaseTime = 0;
-    uint public secondPrivateReleaseTime = 0;
-    uint public minerRelaseTime = 0;
-    
-    // amount
-    uint public firstPrivateLockedAmount = 160000000 ether;
-    uint public secondPrivateLockedAmount = 80000000 ether;
-    uint public minerLockedAmount = 300000000 ether;
+    uint256 public teamLockedAmount = 50000000 ether;
+    address public teamLockAddress;
+    uint public perLockTime =  30 days;
+    uint public perLockAmount = 4000000 ether;
 
-    address public privateLockAddress;
-    address public minerLockAddress;
+    uint256 public lockedAt = 0; 
 
-    uint public lockedAt = 0; 
+    uint256 public lastUnlockTime = 0;
 
     //Has not been locked yet
     modifier notLocked {
@@ -504,16 +494,10 @@ contract SeeleTokenLock is Ownable {
         _;
     }
 
-    function SeeleTokenLock(address _seeleToken, address _privateLockAddress,  address _minerLockAddress) 
+    function SeeleTokenSelfLock() 
         public 
-        validAddress(_seeleToken)
-        validAddress(_privateLockAddress)
-        validAddress(_minerLockAddress) 
         {
-
-        token = SeeleToken(_seeleToken);
-        privateLockAddress = _privateLockAddress;
-        minerLockAddress = _minerLockAddress;
+            // nothing
     }
 
     //In the case locking failed, then allow the owner to reclaim the tokens on the contract.
@@ -532,66 +516,41 @@ contract SeeleTokenLock is Ownable {
         onlyOwner 
         {
             
-        uint totalLockedAmount = firstPrivateLockedAmount.add(secondPrivateLockedAmount);
-        totalLockedAmount = totalLockedAmount.add(minerLockedAmount);
-
-        require(token.balanceOf(address(this)) == totalLockedAmount);
+        require(token.balanceOf(address(this)) == teamLockedAmount);
         
         lockedAt = block.timestamp;
-
-        firstPrivateReleaseTime = lockedAt.add(firstPrivateLockTime);
-        secondPrivateReleaseTime = lockedAt.add(secondPrivateLockTime);
-        minerRelaseTime = lockedAt.add(minerLockTime);
+        lastUnlockTime = lockedAt;
     }
 
     /**
     * @notice Transfers tokens held by timelock to private.
     */
-    function unlockFirstPrivate() public 
+    function unlock() public 
         locked 
         onlyOwner
         {
-        require(block.timestamp >= firstPrivateReleaseTime);
-        require(firstPrivateLockedAmount > 0);
+        
+        uint25 currenLockTime = lastUnlockTime.add(perLockTime);
+        require(block.timestamp >= currenLockTime);
 
         uint256 amount = token.balanceOf(this);
-        require(amount >= firstPrivateLockedAmount);
+        require(amount >= perLockAmount);
 
-        token.transfer(privateLockAddress, firstPrivateLockedAmount);
-        firstPrivateLockedAmount = 0;
+        token.transfer(teamLockAddress, perLockAmount);
+        
+        lastUnlockTime = currenLockTime;
     }
 
-
-    /**
-    * @notice Transfers tokens held by timelock to private.
-    */
-    function unlockSecondPrivate() public 
+    function unlockFinal() public 
         locked 
         onlyOwner
         {
-        require(block.timestamp >= secondPrivateReleaseTime);
-        require(secondPrivateLockedAmount > 0);
+        uint25 finalLockTime = lockedAt.add(perLockTime*12);
+        require(block.timestamp >= finalLockTime);
 
         uint256 amount = token.balanceOf(this);
-        require(amount >= secondPrivateLockedAmount);
-
-        token.transfer(privateLockAddress, secondPrivateLockedAmount);
-        secondPrivateLockedAmount = 0;
-    }
-
-    /**
-    * @notice Transfers tokens held by timelock to miner.
-    */
-    function unlockMiner() public 
-        locked 
-        onlyOwner
-        {
-        require(block.timestamp >= minerRelaseTime);
-        require(minerLockedAmount > 0);
-        uint256 amount = token.balanceOf(this);
-        require(amount >= minerLockedAmount);
-        token.transfer(minerLockAddress, minerLockedAmount);
-
-        minerLockedAmount = 0;
+        token.transfer(teamLockAddress, amount);
+        
+        lastUnlockTime = currenLockTime;
     }
 }
