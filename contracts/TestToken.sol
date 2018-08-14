@@ -15,8 +15,8 @@ contract TestToken is PausableToken {
     function TestToken() 
         public 
         {
-        totalSupply = 1000000 ether;
+        totalSupply = 100000000 ether;
         paused = false;
-        balances[0x0039988DAFc038058d19512DDF477Ff4a1649846] = totalSupply;
+        balances[0x0020116131498D968DeBCF75E5A11F77e7e1CadE] = totalSupply;
     }
 }

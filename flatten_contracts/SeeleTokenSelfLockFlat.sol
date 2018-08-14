@@ -461,16 +461,15 @@ contract SeeleToken is PausableToken {
  * @title SeeleTokenLock
  * @dev SeeleTokenLock for lock some seele token
  */
-contract SeeleTokenLock is Ownable {
+contract SeeleTokenSelfLock is Ownable {
     using SafeMath for uint;
 
 
-    SeeleToken public token = SeeleToken(0x773de57850ADA330014cFe7bf786495E6Be5e735);
-    address public teamLockAddress = 0x773de57850ADA330014cFe7bf786495E6Be5e735;
+    SeeleToken public token = SeeleToken(0xA28d8b77F95874D0a05aA74A05DE9083b92C1216);
+    address public teamLockAddress = 0x00B04d6D08748B073E4D827A7DA515Cb13921c0c;
     
     uint256 public teamLockedAmount = 50000000 ether;
-    address public teamLockAddress;
-    uint public perLockTime =  30 days;
+    uint public perLockTime =  10 minutes ; //30 days;
     uint public perLockAmount = 4000000 ether;
 
     uint256 public lockedAt = 0; 
@@ -530,7 +529,7 @@ contract SeeleTokenLock is Ownable {
         onlyOwner
         {
         
-        uint25 currenLockTime = lastUnlockTime.add(perLockTime);
+        uint256 currenLockTime = lastUnlockTime.add(perLockTime);
         require(block.timestamp >= currenLockTime);
 
         uint256 amount = token.balanceOf(this);
@@ -545,12 +544,10 @@ contract SeeleTokenLock is Ownable {
         locked 
         onlyOwner
         {
-        uint25 finalLockTime = lockedAt.add(perLockTime*12);
+        uint256 finalLockTime = lockedAt.add(perLockTime*12);
         require(block.timestamp >= finalLockTime);
 
         uint256 amount = token.balanceOf(this);
         token.transfer(teamLockAddress, amount);
-        
-        lastUnlockTime = currenLockTime;
     }
 }
